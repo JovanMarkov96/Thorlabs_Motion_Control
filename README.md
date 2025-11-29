@@ -490,12 +490,29 @@ managing all supported Thorlabs motion controllers.
 
 ### Launching the GUI
 
-```bash
-# From command line (recommended)
-python -m Hardware.ThorlabsMotionControl
+**Option 1: Double-click launcher (easiest)**
+```
+Launch_GUI.bat        # Windows - just double-click!
+```
 
-# Or from Python
-from Hardware.ThorlabsMotionControl.gui import main
+**Option 2: Python launcher script**
+```bash
+python launch_gui.py
+```
+
+**Option 3: Python module**
+```bash
+# From parent directory containing Hardware/
+python -m Hardware.Thorlabs_Motion_Control
+
+# Or from the package directory
+cd Hardware/Thorlabs_Motion_Control
+python -m gui
+```
+
+**Option 4: From Python code**
+```python
+from Hardware.Thorlabs_Motion_Control.gui import main
 main()
 ```
 
