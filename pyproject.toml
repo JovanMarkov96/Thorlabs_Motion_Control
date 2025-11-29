@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thorlabs-motion-control"
+version = "1.0.0"
+description = "Unified Python interface for Thorlabs motion control hardware"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Ozeri Lab", email = "roee.ozeri@weizmann.ac.il"}
+]
+maintainers = [
+    {name = "Ozeri Lab", email = "roee.ozeri@weizmann.ac.il"}
+]
+keywords = [
+    "thorlabs",
+    "motion-control",
+    "kinesis",
+    "kdc101",
+    "kbd101",
+    "kim101",
+    "tdc001",
+    "piezo",
+    "motor-controller",
+    "laboratory",
+    "instrumentation"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "pythonnet>=3.0.0",
+    "pywin32>=305",
+]
+
+[project.optional-dependencies]
+gui = [
+    "PyQt5>=5.15",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "isort>=5.0",
+    "flake8>=6.0",
+]
+all = [
+    "thorlabs-motion-control[gui,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/OzeriLab/ThorlabsMotionControl"
+Documentation = "https://github.com/OzeriLab/ThorlabsMotionControl#readme"
+Repository = "https://github.com/OzeriLab/ThorlabsMotionControl.git"
+Issues = "https://github.com/OzeriLab/ThorlabsMotionControl/issues"
+
+[project.scripts]
+thorlabs-gui = "ThorlabsMotionControl.gui:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ThorlabsMotionControl*"]
+
+[tool.setuptools.package-data]
+ThorlabsMotionControl = [
+    "docs/**/*",
+    "config/*.json",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
