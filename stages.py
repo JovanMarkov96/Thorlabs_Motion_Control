@@ -86,10 +86,6 @@ Find compatible stages::
     kbd_stages = get_compatible_stages('KBD101')
     print(f"KBD101 supports: {', '.join(kbd_stages)}")
 
-Author
-------
-Weizmann Institute Ion Trap Lab (Lab185)
-
 Notes
 -----
 Stage specifications are based on Thorlabs product documentation.

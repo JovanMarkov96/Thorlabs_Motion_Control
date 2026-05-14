@@ -67,9 +67,6 @@ Get controller capabilities::
     print(f"APT support: {supports_apt('KDC101')}")  # True
     print(f"APT support: {supports_apt('KIM101')}")  # False
 
-Author
-------
-Weizmann Institute Ion Trap Lab (Lab185)
 """
 
 from typing import Dict, List, Optional, Any

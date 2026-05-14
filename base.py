@@ -73,9 +73,6 @@ Using context manager::
         ctrl.move_absolute(45.0)
     # Auto-disconnects on exit
 
-Author
-------
-Weizmann Institute Ion Trap Lab (Lab185)
 """
 
 from abc import ABC, abstractmethod

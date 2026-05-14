@@ -24,9 +24,6 @@ Or from Python::
     from Hardware.ThorlabsMotionControl.gui import main
     main()
 
-Author
-------
-Weizmann Institute Ion Trap Lab (Lab185)
 """
 
 from __future__ import annotations
@@ -2232,7 +2229,6 @@ class ThorlabsMotionControlGUI(QMainWindow):
             "<li>KPZ101 - K-Cube Piezo</li>"
             "</ul>"
             "<p>Uses Kinesis .NET (64-bit) or APT COM (32-bit) as backend.</p>"
-            "<p><b>Author:</b> Weizmann Institute Ion Trap Lab</p>"
         )
     
     def closeEvent(self, event):

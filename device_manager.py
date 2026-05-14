@@ -96,9 +96,6 @@ Requirements
   - comtypes package
   - Thorlabs APT software installed
 
-Author
-------
-Weizmann Institute Ion Trap Lab (Lab185)
 """
 
 from __future__ import annotations
