@@ -50,8 +50,18 @@ class TDC001Controller(MotorController):
             print(f"Failed to load Kinesis assemblies: {e}")
             return False
     
-    def connect(self) -> bool:
-        """Connect to the TDC001 controller."""
+    def connect(self, enable: bool = True) -> bool:
+        """
+        Connect to the TDC001 controller.
+
+        Args:
+            enable: Energize the servo drive as part of connecting. True is
+                the default and matches the previous behaviour. Pass False
+                for a read-only monitoring connection: status polling,
+                position reads and LoadMotorConfiguration still happen, but
+                the drive stays disabled, so no command can move the stage
+                until enable() is called explicitly.
+        """
         if not self._load_assemblies():
             raise ConnectionError("Failed to load Kinesis assemblies")
         
@@ -76,10 +86,11 @@ class TDC001Controller(MotorController):
             
             self._device.StartPolling(250)
             time.sleep(0.5)
-            
-            self._device.EnableDevice()
-            time.sleep(0.5)
-            
+
+            if enable:
+                self._device.EnableDevice()
+                time.sleep(0.5)
+
             motor_config = self._device.LoadMotorConfiguration(serial_str)
             
             self._set_state(ControllerState.CONNECTED)
@@ -105,6 +116,15 @@ class TDC001Controller(MotorController):
         """Flash the front panel LED."""
         if self._device:
             self._device.IdentifyDevice()
+
+    def enable(self) -> None:
+        """
+        Energize the servo drive. Required before any move if the device was
+        connected with enable=False. Safe to call when already enabled.
+        """
+        if self._device:
+            self._device.EnableDevice()
+            time.sleep(0.5)
     
     def home(self, wait: bool = True, timeout: float = 60.0) -> bool:
         """Home the stage."""
