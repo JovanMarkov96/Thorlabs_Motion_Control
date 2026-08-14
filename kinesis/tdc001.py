@@ -16,19 +16,51 @@ from ..base import MotorController, ControllerState, ConnectionError, MovementEr
 # Kinesis DLL path
 KINESIS_PATH = Path(r"C:\Program Files\Thorlabs\Kinesis")
 
+# ---------------------------------------------------------------------------
+# SLOW BY DEFAULT.  Every TDC001 in Lab185 turns a 1064 nm waveplate, and those
+# angles ARE the calibration: the co-prop gate sits on a latitude that has to be
+# held to |eps| ~ 0.02, which is a fraction of a degree on the dial.  Kinesis
+# hands a PRM1-Z8 a default max velocity around 25 deg/s, and slamming a
+# worm-gear rotation mount at that speed lands it on the wrong side of its own
+# backlash -- the mount reads the right angle and the polarization is somewhere
+# else.  That is a lost gate setting, and re-finding it costs a night.
+#
+# 2 deg/s with matched acceleration is ~12x slower than the Kinesis default.  A
+# typical campaign step (a few degrees) still completes in a second or two; the
+# worst case, a full 360 deg, takes 180 s, which is why the move timeout below
+# is generous rather than the old 60 s.  Do not raise these to "save time" --
+# the time they save is measured in seconds and the time they cost is measured
+# in nights.  Override per-instance only for a deliberate fast bulk move.
+DEFAULT_MAX_VELOCITY_DEG_S = 2.0
+DEFAULT_ACCELERATION_DEG_S2 = 2.0
+# A slow stage needs a long leash: 360 deg at 2 deg/s is 180 s.  The timeout is
+# a stuck-stage guard, not a speed budget.
+DEFAULT_MOVE_TIMEOUT_S = 300.0
+
 
 class TDC001Controller(MotorController):
     """
     TDC001 T-Cube DC Servo Motor Controller (Legacy).
-    
+
     Supports the same stages as KDC101 (PRM1Z8, Z825B, MTS25/50, etc.)
     but in the older T-Cube form factor.
+
+    Connects SLOW: `connect()` applies DEFAULT_MAX_VELOCITY_DEG_S /
+    DEFAULT_ACCELERATION_DEG_S2 unless the caller overrides them, so every
+    consumer (the waveplate GUI, ServerLab, the campaign scripts) inherits the
+    same gentle motion without having to remember to ask for it.
     """
-    
-    def __init__(self, serial_number: int, channel: int = 1):
+
+    def __init__(self, serial_number: int, channel: int = 1,
+                 max_velocity: Optional[float] = None,
+                 acceleration: Optional[float] = None):
         super().__init__(serial_number, channel)
         self._device = None
         self._is_initialized = False
+        self.max_velocity = (DEFAULT_MAX_VELOCITY_DEG_S if max_velocity is None
+                             else float(max_velocity))
+        self.acceleration = (DEFAULT_ACCELERATION_DEG_S2 if acceleration is None
+                             else float(acceleration))
     
     def _load_assemblies(self) -> bool:
         """Load required Kinesis .NET assemblies."""
@@ -92,7 +124,14 @@ class TDC001Controller(MotorController):
                 time.sleep(0.5)
 
             motor_config = self._device.LoadMotorConfiguration(serial_str)
-            
+
+            # Apply the slow defaults AFTER LoadMotorConfiguration -- that call
+            # installs the stage profile (and with it Thorlabs' fast default
+            # velocity), so setting them earlier would be overwritten.  Guarded:
+            # a controller that refuses SetVelocityParams must still connect,
+            # but it must SAY so rather than silently running fast.
+            self.apply_motion_limits()
+
             self._set_state(ControllerState.CONNECTED)
             return True
         
@@ -151,12 +190,18 @@ class TDC001Controller(MotorController):
             raise MovementError(f"Homing failed: {e}")
     
     def move_absolute(
-        self, 
-        position: float, 
-        wait: bool = True, 
-        timeout: float = 60.0
+        self,
+        position: float,
+        wait: bool = True,
+        timeout: float = DEFAULT_MOVE_TIMEOUT_S
     ) -> bool:
-        """Move to absolute position."""
+        """Move to absolute position.
+
+        NB the timeout default is generous (see DEFAULT_MOVE_TIMEOUT_S): the
+        stage is deliberately slow, so 60 s -- the old default -- would abort a
+        legitimate move of more than ~120 deg partway through, leaving the plate
+        at an angle nobody recorded.
+        """
         if not self._device:
             return False
         
@@ -183,12 +228,12 @@ class TDC001Controller(MotorController):
             raise MovementError(f"Move failed: {e}")
     
     def move_relative(
-        self, 
-        distance: float, 
-        wait: bool = True, 
-        timeout: float = 60.0
+        self,
+        distance: float,
+        wait: bool = True,
+        timeout: float = DEFAULT_MOVE_TIMEOUT_S
     ) -> bool:
-        """Move by relative distance."""
+        """Move by relative distance.  Same generous timeout as move_absolute."""
         if not self._device:
             return False
         
@@ -265,6 +310,31 @@ class TDC001Controller(MotorController):
             "enabled": self._device.IsEnabled if hasattr(self._device, 'IsEnabled') else True,
         }
     
+    def apply_motion_limits(self) -> bool:
+        """Push self.max_velocity / self.acceleration to the cube.
+
+        Called by connect().  Separate so it can be re-applied after anything
+        that reloads the stage profile, and so the GUI can report what actually
+        took effect.  Returns True only if BOTH landed; prints loudly otherwise,
+        because the failure mode is a stage that silently keeps Thorlabs' fast
+        default and quietly loses the waveplate calibration to backlash.
+        """
+        if not self._device:
+            return False
+        ok_v = self.set_velocity(self.max_velocity)
+        ok_a = self.set_acceleration(self.acceleration)
+        if not (ok_v and ok_a):
+            print(f"[TDC001 {self.serial_number}]: WARNING -- could not apply slow "
+                  f"motion limits (velocity ok={ok_v}, acceleration ok={ok_a}). "
+                  f"The stage may move at the Kinesis default speed; waveplate "
+                  f"angles set now are NOT backlash-trustworthy.")
+            return False
+        got = self.get_velocity_params()
+        print(f"[TDC001 {self.serial_number}]: motion limited to "
+              f"{got.get('max_velocity', float('nan')):.3g} deg/s, "
+              f"accel {got.get('acceleration', float('nan')):.3g} deg/s^2")
+        return True
+
     def set_velocity(self, velocity: float) -> bool:
         """Set maximum velocity."""
         if not self._device:
